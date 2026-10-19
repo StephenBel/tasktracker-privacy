@@ -332,13 +332,65 @@ function applyPose(root, pose) {
   return B;
 }
 
+// Запасной манекен, если GLB не загрузился (например, CSP просмотрщика режет внешний CDN).
+const COSTUME = {
+  mother: [0x4a3f36, 0x2a2622], grandpa: [0x1c1c1e, 0x26262a], ilya: [0x7a3b34, 0x2e3440],
+  fedya: [0x5a6f8c, 0x2e3440], vera: [0x9a8a70, 0x5a4a5a], yerema: [0x8a7a9c, 0x8a7a9c],
+};
+function makeMannequin(id) {
+  const h = CHARACTER_HEIGHTS[id], [top, bottom] = COSTUME[id] || [0x888888, 0x555555];
+  const skin = mat(0xd8b49a), mt = mat(top), mb = mat(bottom);
+  const root = new THREE.Group();
+  const part = (len, r, m, parent) => {
+    const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(len - 2 * r, 0.01), 4, 8), m);
+    mesh.position.y = -len / 2; mesh.castShadow = true; parent.add(mesh); return mesh;
+  };
+  const joint = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
+  const hips = joint(root, 0, 0.52 * h, 0);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.09 * h, 0.16 * h, 4, 8), mt);
+  torso.position.y = 0.15 * h; torso.scale.z = 0.7; torso.castShadow = true; hips.add(torso);
+  const head = joint(hips, 0, 0.36 * h, 0);
+  const hm = new THREE.Mesh(new THREE.SphereGeometry(0.065 * h, 16, 12), id === 'mother' ? mt : skin);
+  hm.position.y = 0.04 * h; hm.castShadow = true; head.add(hm);
+  const B = { hips, head, mannequin: true };
+  for (const [side, sx] of [['l', 1], ['r', -1]]) {
+    const up = joint(hips, sx * 0.055 * h, 0, 0); part(0.25 * h, 0.035 * h, mb, up);
+    const low = joint(up, 0, -0.25 * h, 0); part(0.25 * h, 0.03 * h, mb, low);
+    const arm = joint(hips, sx * 0.12 * h, 0.27 * h, 0); part(0.17 * h, 0.028 * h, mt, arm);
+    const fore = joint(arm, 0, -0.17 * h, 0); part(0.16 * h, 0.024 * h, mt, fore);
+    B[side + 'Up'] = up; B[side + 'Leg'] = low; B[side + 'Arm'] = arm; B[side + 'Fore'] = fore;
+  }
+  return { root, B };
+}
+
+// те же позы, что и для скелета: персонаж смотрит в +Z, его левая сторона в +X
+function poseMannequin(B, pose) {
+  const r = (o, x = 0, y = 0, z = 0) => { o.rotation.x += D(x); o.rotation.y += D(y); o.rotation.z += D(z); };
+  const sit = () => { r(B.lUp, -88); r(B.rUp, -88); r(B.lLeg, 88); r(B.rLeg, 88); };
+  switch (pose) {
+    case 'stand_hands': r(B.lArm, -25); r(B.rArm, -25); r(B.lFore, -70); r(B.rFore, -70); r(B.head, 18); break;
+    case 'sit': sit(); r(B.lArm, -30); r(B.rArm, -30); r(B.lFore, -50); r(B.rFore, -50); break;
+    case 'draw': sit(); r(B.lArm, -45); r(B.rArm, -45); r(B.lFore, -55); r(B.rFore, -55); r(B.head, 12); break;
+    case 'point': sit(); r(B.lArm, 0, 0, 110); r(B.rArm, -30); r(B.rFore, -50); r(B.head, -12, 55); break;
+    case 'lie': r(B.lArm, -25); r(B.rArm, -25); r(B.lFore, 0, 0, -100); r(B.rFore, 0, 0, 100); break;
+  }
+  B.hips.updateMatrixWorld(true);
+}
+
+let usedFallback = false;
 async function placeCharacters(sceneNo, group) {
   for (const c of blocking[sceneNo] || []) {
     if (!CHARACTER_URLS[c.id]) continue;
-    const ch = await loadCharacter(c.id);
+    let ch, B;
+    try {
+      ch = await loadCharacter(c.id);
+    } catch (e) {
+      usedFallback = true;
+      ({ root: ch, B } = makeMannequin(c.id));
+    }
     const holder = new THREE.Group();
     holder.add(ch);
-    const B = applyPose(ch, c.pose);
+    if (B) poseMannequin(B, c.pose); else B = applyPose(ch, c.pose);
     if (c.seat !== undefined && B.hips) {
       ch.updateMatrixWorld(true);
       const hp = B.hips.getWorldPosition(new THREE.Vector3());
@@ -400,6 +452,8 @@ async function renderShot(id, t = 0) {
   for (const l of flickers) l.intensity = 1.3 * (0.85 + 0.15 * Math.sin(time * 9 + l.userData.flicker) * Math.sin(time * 5.3 + l.userData.flicker * 2));
   renderer.render(sc, camera);
   if (hud) hud.innerHTML = `<b>${shot.id}</b> · Сц.${shot.scene} · ${camera.getFocalLength().toFixed(0)} мм (S35) · ${shot.dur}с<br>${shot.desc}`;
+  const note = document.getElementById('fallback');
+  if (note) note.hidden = !usedFallback;
   return shot;
 }
 
@@ -415,8 +469,17 @@ resize();
 const list = document.getElementById('shots');
 let current = shots[0].id, playing = false, t0 = 0, playIndex = 0;
 if (list) {
+  const sceneNames = { 1: 'Сц. 1 · Нат. дом Громовых · ночь', 2: 'Сц. 2 · Инт. гостиная · ночь', 3: 'Сц. 3 · Инт. кухня · ночь' };
+  let lastScene = null;
   for (const s of shots) {
+    if (s.scene !== lastScene) {
+      lastScene = s.scene;
+      const h = document.createElement('div'); h.className = 'scene'; h.textContent = sceneNames[s.scene] || `Сц. ${s.scene}`;
+      list.appendChild(h);
+    }
     const li = document.createElement('li');
+    li.tabIndex = 0;
+    li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.onclick(); } };
     li.innerHTML = `<b>${s.id}</b> <span>${s.lens}мм · ${s.dur}с</span><div>${s.desc}</div>`;
     li.onclick = () => { playing = false; current = s.id; mark(); renderShot(current, 0); };
     li.dataset.id = s.id; list.appendChild(li);
