@@ -1,0 +1,22 @@
+{
+  "note": "ID генераций Higgsfield. Картинки: nano_banana_pro (сервер отработал как nano_banana_2). 3D: image_to_3d (Meshy), текстура + авториг, A-pose.",
+  "images": {
+    "mother": "c0f00220-3a57-4fe5-8b86-b23cd5b50933",
+    "grandpa": "bd82f945-1657-42ff-a52d-a2c793512db8",
+    "ilya": "0068ec7f-0f80-4e90-b412-bf26b4a006b6",
+    "fedya": "3f0270ea-aedf-48b2-9ff5-3f5ce9cda8af",
+    "vera": "bb66b0a4-b76d-4bbb-a35f-6bf0dc695bac",
+    "yerema": "5ed3a919-b855-461e-aa40-41cd51596478",
+    "house_ext": "2d09485f-ef3d-4c7f-8848-e52472c2a32a",
+    "living_room": "91bf587a-1938-47af-8da8-3abd4318a6ba",
+    "kitchen": "c8e2ea7b-fa3c-45fa-ac98-ee89b7afec16"
+  },
+  "models_3d": {
+    "mother": "e18b2bae-d0a0-4ee9-ad67-76d36a648b68",
+    "grandpa": "7509718e-9891-416d-ab9a-c7a81dc86acb",
+    "ilya": "891f874a-695e-44d2-a1f9-540b6f4db28d",
+    "fedya": "17eb2597-237b-4632-aa87-92528ea57b2b",
+    "vera": "ee5c1bb0-a4d6-4730-ac1d-f461c997ecef",
+    "yerema": "c6362c1a-983d-4bd1-8bab-7d85474b6d33"
+  }
+}
