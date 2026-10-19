@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { shots, blocking, SENSOR_MM, ASPECT } from './shots.js';
-import { CHARACTER_URLS, CHARACTER_HEIGHTS } from './assets.js';
+import { CHARACTER_URLS, CHARACTER_HEIGHTS, AUDIO_URLS } from './assets.js';
 
 const D = THREE.MathUtils.degToRad;
 const canvas = document.getElementById('view');
@@ -452,6 +452,13 @@ async function renderShot(id, t = 0) {
   for (const l of flickers) l.intensity = 1.3 * (0.85 + 0.15 * Math.sin(time * 9 + l.userData.flicker) * Math.sin(time * 5.3 + l.userData.flicker * 2));
   renderer.render(sc, camera);
   if (hud) hud.innerHTML = `<b>${shot.id}</b> · Сц.${shot.scene} · ${camera.getFocalLength().toFixed(0)} мм (S35) · ${shot.dur}с<br>${shot.desc}`;
+  const sub = document.getElementById('sub');
+  if (sub) {
+    const sec = t * shot.dur;
+    const line = (shot.lines || []).find(l => sec >= l.at && sec < l.at + l.len);
+    sub.innerHTML = line ? `<span class="who">${line.who}</span> ${line.text}` : '';
+    sub.hidden = !line;
+  }
   const note = document.getElementById('fallback');
   if (note) note.hidden = !usedFallback;
   return shot;
@@ -481,21 +488,40 @@ if (list) {
     li.tabIndex = 0;
     li.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.onclick(); } };
     li.innerHTML = `<b>${s.id}</b> <span>${s.lens}мм · ${s.dur}с</span><div>${s.desc}</div>`;
-    li.onclick = () => { playing = false; current = s.id; mark(); renderShot(current, 0); };
+    li.onclick = () => { setPlaying(false); current = s.id; mark(); renderShot(current, 0); };
     li.dataset.id = s.id; list.appendChild(li);
   }
 }
+// озвучка: реплики шота запускаются по таймерам от начала шота
+const audioCache = {};
+let audioTimers = [];
+function stopAudio() {
+  audioTimers.forEach(clearTimeout); audioTimers = [];
+  Object.values(audioCache).forEach(a => { a.pause(); a.currentTime = 0; });
+}
+function startShotAudio(shot) {
+  for (const l of shot.lines || []) {
+    const a = audioCache[l.audio] ||= new Audio(AUDIO_URLS[l.audio]);
+    audioTimers.push(setTimeout(() => { a.currentTime = 0; a.play().catch(() => {}); }, l.at * 1000));
+  }
+}
+function setPlaying(on) {
+  playing = on;
+  const btn = document.getElementById('play');
+  if (btn) btn.textContent = on ? '■ Стоп' : '▶ Аниматик';
+  stopAudio();
+  if (on) { playIndex = shots.findIndex(s => s.id === current); t0 = performance.now(); startShotAudio(shots[playIndex]); }
+}
+
 function mark() { list?.querySelectorAll('li').forEach(li => li.classList.toggle('on', li.dataset.id === current)); }
 
-document.getElementById('play')?.addEventListener('click', () => {
-  playing = !playing; playIndex = shots.findIndex(s => s.id === current); t0 = performance.now();
-});
+document.getElementById('play')?.addEventListener('click', () => setPlaying(!playing));
 
 async function loop() {
   if (playing) {
     const shot = shots[playIndex];
     const t = (performance.now() - t0) / 1000 / shot.dur;
-    if (t >= 1) { playIndex = (playIndex + 1) % shots.length; t0 = performance.now(); current = shots[playIndex].id; mark(); }
+    if (t >= 1) { playIndex = (playIndex + 1) % shots.length; t0 = performance.now(); current = shots[playIndex].id; mark(); startShotAudio(shots[playIndex]); }
     await renderShot(current, Math.min(t, 1));
   } else {
     await renderShot(current, 0);

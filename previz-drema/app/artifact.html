@@ -32,6 +32,8 @@
   canvas { display: block; width: 100%; height: auto; }
   #hud { position: absolute; left: 12px; right: 12px; bottom: 10px; font-size: 14px; color: var(--text); text-shadow: 0 1px 3px #000; }
   #hud b { color: var(--accent); font-family: var(--mono); }
+  #sub { position: absolute; left: 8%; right: 8%; top: 62%; text-align: center; font-size: clamp(13px, 2vw, 20px); line-height: 1.35; color: #fff; text-shadow: 0 0 4px #000, 0 1px 3px #000; text-wrap: balance; }
+  #sub .who { display: block; font-size: 0.7em; letter-spacing: 0.08em; color: var(--accent); }
   #fallback { margin: 10px 0 0; font-size: 13px; color: var(--muted); max-width: 70ch; }
   .boards { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
   .boards a { color: var(--accent); }
@@ -58,7 +60,7 @@
       <span class="meta">14 шотов · Super 35 · 2.39:1</span>
       <button id="play" type="button">▶ Аниматик</button>
     </header>
-    <div class="stage"><canvas id="view"></canvas><div id="hud"></div></div>
+    <div class="stage"><canvas id="view"></canvas><div id="sub" hidden></div><div id="hud"></div></div>
     <p id="fallback" hidden>Здесь персонажи показаны манекенами: просмотрщик не пускает к хранилищу Higgsfield, где лежат 3D-модели. Расстановка, позы и камеры те же. С настоящими моделями превиз открывается локально или на раскадровках ниже.</p>
     <div class="boards">
       <span class="meta">Раскадровки с моделями:</span>
