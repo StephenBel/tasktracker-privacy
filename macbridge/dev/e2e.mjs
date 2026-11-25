@@ -360,6 +360,28 @@ try {
   await sleep(350);
   check('zoom button restores the previous zoom', near((await view()).zoom, z.zoom, 0.01));
 
+  // ------------------------------------------------------------ smart zoom
+  // The Mac announces the rectangle of the focused text field.
+  const fieldRect = { x: 0.3, y: 0.5, w: 0.25, h: 0.03 };
+  await page.evaluate((r) => window.__macbridge.onData({ t: 'focus', ...r }), fieldRect);
+  await sleep(350);
+  v = await view();
+  const left = v.tx + fieldRect.x * v.fitW * v.zoom;
+  const right = v.tx + (fieldRect.x + fieldRect.w) * v.fitW * v.zoom;
+  const mid = v.ty + (fieldRect.y + fieldRect.h / 2) * v.fitH * v.zoom;
+  check('focused text field is zoomed to fill the width',
+    near(left, 14, 1) && near(right, v.stageW - 14, 1) && near(mid, v.stageH / 2, 1),
+    `zoom=${v.zoom.toFixed(2)} field ${left.toFixed(0)}..${right.toFixed(0)} of ${v.stageW}`);
+  if (shots) await page.screenshot({ path: path.join(shots, '8-field.png') });
+  const zField = v.zoom;
+  await page.evaluate(() => window.__macbridge.onData({ t: 'focus', x: 0, y: 0, w: 0.9, h: 0.8 }));
+  await sleep(300);
+  check('a large editor does not change the zoom', near((await view()).zoom, zField, 0.01));
+  await page.evaluate(() => window.__macbridge.onData({ t: 'focus', x: 5, y: 'a', w: -1, h: 2 }));
+  await page.evaluate(() => window.__macbridge.onData({ t: 'focus' }));
+  await sleep(100);
+  check('malformed or empty focus messages are ignored', near((await view()).zoom, zField, 0.01));
+
   // ------------------------------------------------------------- keyboard
   await clearInputs();
   await page.tap('#btn-kbd');

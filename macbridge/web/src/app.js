@@ -322,6 +322,12 @@ function onData(s, data) {
     return;
   }
   if (msg.t === 'pong') rtt = Math.round(performance.now() - pingSent);
+  if (msg.t === 'focus') {
+    // A text field got the focus on the Mac: frame it. Without a rectangle the
+    // focus has left the field.
+    const ok = [msg.x, msg.y, msg.w, msg.h].every((v) => Number.isFinite(v) && v >= 0 && v <= 1);
+    viewer.focusField(ok && msg.w > 0 && msg.h > 0 ? { x: msg.x, y: msg.y, w: msg.w, h: msg.h } : null);
+  }
   if (msg.t === 'info') {
     info = msg;
     const d = msg.displays.find((x) => x.id === msg.display);
@@ -474,5 +480,7 @@ async function boot() {
   connect(); // one tap on the home-screen icon is enough
 }
 
-window.__macbridge = { viewer };
+// For tests and diagnostics: the viewer, and a way to feed a message as if it
+// came from the Mac.
+window.__macbridge = { viewer, onData: (msg) => sess && onData(sess, JSON.stringify(msg)) };
 boot();

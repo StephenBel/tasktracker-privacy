@@ -28,6 +28,7 @@ export function createViewer({ stage, canvas, video, fx, minimap, send }) {
   let preferredZoom = 0; // last zoom chosen by the user, 0 = none yet
   let focus = { x: 0.5, y: 0.5 }; // last point the user touched, as fractions
   let displayW = 1440; // logical width of the Mac screen, for the zoom limit
+  let field = null; // text field that has the focus on the Mac, as fractions
   let mapTimer = null;
   let inertia = 0;
 
@@ -75,8 +76,33 @@ export function createViewer({ stage, canvas, video, fx, minimap, send }) {
     if (hadSize) centreOn(centre.x, centre.y);
     // Whatever the user touched last (a text field, usually) must stay visible.
     if (hadSize && zoom > 1.01) reveal(focus.x, focus.y);
+    // The stage changed (keyboard, rotation): frame the focused field again.
+    if (hadSize && field) fitField();
     clampView();
     render(false);
+  }
+
+  // Zoom so that the whole focused text field fills the stage.
+  // Large editors (most of the screen) are left alone: fitting them would
+  // zoom out and make the text unreadable.
+  function fitField() {
+    if (!field || !fitW) return false;
+    if (field.w > 0.7 && field.h > 0.35) return false;
+    const m = 14; // px of margin around the field
+    const zw = (stageW - 2 * m) / (field.w * fitW);
+    const zh = (stageH - 2 * m) / (field.h * fitH);
+    zoom = Math.max(1, Math.min(maxZoom(), zw, zh));
+    centreOn(field.x + field.w / 2, field.y + field.h / 2);
+    clampView();
+    return true;
+  }
+
+  function focusField(rect) {
+    field = rect;
+    if (!rect || g) return; // never move the picture under a finger
+    stopInertia();
+    animate();
+    if (fitField()) render();
   }
 
   function centreOn(x, y) {
@@ -124,6 +150,7 @@ export function createViewer({ stage, canvas, video, fx, minimap, send }) {
   }
 
   function toggleZoom() {
+    field = null;
     animate();
     if (zoom > 1.05) {
       preferredZoom = zoom;
@@ -283,6 +310,7 @@ export function createViewer({ stage, canvas, video, fx, minimap, send }) {
         zoomAt(c.x, c.y, zoom * (d / g.dPrev));
         g.dPrev = d;
         preferredZoom = zoom;
+        field = null; // the user framed the picture by hand
         render();
       } else if (g.sub === 'scroll') {
         const at = toScreen(g.c0.x, g.c0.y, false);
@@ -414,6 +442,7 @@ export function createViewer({ stage, canvas, video, fx, minimap, send }) {
 
   return {
     toggleZoom,
+    focusField,
     setDisplay(width, height) {
       displayW = width;
       if (width && height && !video.videoWidth) {

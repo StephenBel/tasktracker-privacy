@@ -21,6 +21,8 @@
 // Mac -> phone:
 //   { t: 'info', name, display, displays: [{ id, label, w, h }] }
 //   { t: 'pong', id }
+//   { t: 'focus', x, y, w, h }                a text field got the focus (fractions
+//                                             of the screen); no x: focus left it
 
 export const PAIR_TTL_MS = 5 * 60 * 1000;
 export const HELLO_MAX_SKEW_MS = 2 * 60 * 1000;
