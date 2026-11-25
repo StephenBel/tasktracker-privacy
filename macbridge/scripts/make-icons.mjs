@@ -16,9 +16,7 @@ const glyph = (stroke, w) => `
   </g>`;
 
 const appIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#3b8dff"/><stop offset="1" stop-color="#1a4fd6"/></linearGradient></defs>
-  <rect width="100" height="100" fill="url(#g)"/>
+  <rect width="100" height="100" fill="#2a6fe8"/>
   <g transform="translate(2 -3)">${glyph('#fff', 5)}</g>
 </svg>`;
 

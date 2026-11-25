@@ -2,11 +2,20 @@
   "clientUrl": "https://YOUR-CLIENT.example/",
   "signal": {
     "type": "supabase",
-    "url": "https://YOUR-PROJECT.supabase.co",
-    "key": "YOUR-PUBLISHABLE-KEY"
+    "url": "https://rezoyydjugoravsdzlgg.supabase.co",
+    "key": "sb_publishable_WajCHGmUlXe14w04NT3_oQ_SaURoDKW"
   },
   "iceServers": [
-    { "urls": ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] }
+    {
+      "urls": [
+        "stun:stun.l.google.com:19302",
+        "stun:stun.cloudflare.com:3478"
+      ]
+    }
   ],
-  "video": { "maxWidth": 2560, "maxFps": 30, "maxBitrate": 8000000 }
+  "video": {
+    "maxWidth": 2560,
+    "maxFps": 30,
+    "maxBitrate": 8000000
+  }
 }
