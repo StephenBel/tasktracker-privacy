@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob: mediastream:; manifest-src 'self'; connect-src __CONNECT_SRC__">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MacBridge">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+<title>MacBridge</title>
+</head>
+<body>
+<div id="app">
+
+  <!-- Not paired yet -->
+  <section id="setup" class="panel" hidden>
+    <div class="logo" aria-hidden="true"></div>
+    <h1>MacBridge</h1>
+    <p class="lead">Экран вашего Мака в телефоне.</p>
+    <ol class="steps">
+      <li>Запустите MacBridge на Маке.</li>
+      <li>В его меню в строке сверху выберите «Подключить телефон…».</li>
+      <li>Наведите камеру на QR-код и откройте ссылку.</li>
+    </ol>
+    <details class="manual">
+      <summary>Вставить ссылку вручную</summary>
+      <p>На Маке нажмите «Скопировать ссылку», затем вставьте её сюда.</p>
+      <div class="field">
+        <input id="link-input" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…#p=…" aria-label="Ссылка для сопряжения">
+        <button id="link-go" type="button" class="primary">Подключить</button>
+      </div>
+    </details>
+    <p id="setup-error" class="error" role="alert" hidden></p>
+  </section>
+
+  <!-- Paired, not connected -->
+  <section id="connect" class="panel" hidden>
+    <div class="logo" aria-hidden="true"></div>
+    <h1 id="host-name">Mac</h1>
+    <p id="connect-status" class="lead" role="status"></p>
+    <button id="connect-go" type="button" class="primary big">Подключиться</button>
+    <button id="forget" type="button" class="link">Забыть этот Мак</button>
+  </section>
+
+  <!-- Connected -->
+  <section id="view" hidden>
+    <div id="stage">
+      <div id="canvas"><video id="video" playsinline muted autoplay disablepictureinpicture></video></div>
+      <div id="fx" aria-hidden="true"></div>
+      <div id="minimap" aria-hidden="true"><i></i></div>
+      <div id="banner" role="status" hidden></div>
+    </div>
+
+    <div id="keys" hidden>
+      <button type="button" data-key="Escape">esc</button>
+      <button type="button" data-key="Tab">tab</button>
+      <button type="button" data-mod="cmd" aria-pressed="false">⌘</button>
+      <button type="button" data-mod="alt" aria-pressed="false">⌥</button>
+      <button type="button" data-mod="ctrl" aria-pressed="false">⌃</button>
+      <button type="button" data-mod="shift" aria-pressed="false">⇧</button>
+      <button type="button" data-key="ArrowLeft" data-repeat aria-label="Влево">←</button>
+      <button type="button" data-key="ArrowDown" data-repeat aria-label="Вниз">↓</button>
+      <button type="button" data-key="ArrowUp" data-repeat aria-label="Вверх">↑</button>
+      <button type="button" data-key="ArrowRight" data-repeat aria-label="Вправо">→</button>
+      <button type="button" data-key="Delete" data-repeat aria-label="Удалить вперёд">⌦</button>
+      <button type="button" data-action="paste">Вставить</button>
+    </div>
+
+    <nav id="bar">
+      <button type="button" id="btn-kbd" aria-label="Клавиатура" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M6.5 9.5h.01M10 9.5h.01M13.5 9.5h.01M17 9.5h.01M6.5 12.5h.01M10 12.5h.01M13.5 12.5h.01M17 12.5h.01M8 15.5h8"/></svg>
+      </button>
+      <button type="button" id="btn-zoom" aria-label="Приблизить или показать весь экран">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M8 10.5h5M10.5 8v5"/></svg>
+      </button>
+      <button type="button" id="btn-display" aria-label="Переключить экран" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/></svg>
+      </button>
+      <span id="dot" title=""></span>
+      <button type="button" id="btn-more" aria-label="Ещё">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg>
+      </button>
+    </nav>
+
+    <div id="sheet" hidden>
+      <div class="sheet-card" role="dialog" aria-label="Подключение">
+        <p id="sheet-title"></p>
+        <p id="sheet-info" class="muted"></p>
+        <button type="button" id="sheet-disconnect">Отключиться</button>
+        <button type="button" id="sheet-forget" class="danger">Забыть этот Мак</button>
+        <button type="button" id="sheet-close" class="quiet">Закрыть</button>
+      </div>
+    </div>
+
+    <textarea id="kbd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="enter" aria-label="Ввод текста на Мак"></textarea>
+  </section>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

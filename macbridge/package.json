@@ -1,0 +1,26 @@
+{
+  "name": "macbridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "View and control a Mac from a phone browser over an end-to-end encrypted WebRTC link",
+  "type": "module",
+  "main": "host/main.mjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:helper": "node scripts/build-helper.mjs",
+    "postinstall": "node scripts/build-helper.mjs --optional",
+    "start": "node scripts/build.mjs && electron .",
+    "relay": "node dev/relay.mjs",
+    "test": "node dev/e2e.mjs",
+    "test:electron": "node dev/electron-smoke.mjs"
+  },
+  "dependencies": {
+    "@supabase/realtime-js": "^2.11.2",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "esbuild": "^0.28.2",
+    "ws": "^8.18.0"
+  }
+}

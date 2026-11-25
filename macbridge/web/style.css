@@ -1,0 +1,342 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0c0e;
+  --panel: #17191d;
+  --raise: #23262c;
+  --line: #2f333a;
+  --fg: #f2f3f5;
+  --muted: #9aa0aa;
+  --accent: #4c9bff;
+  --danger: #ff6b62;
+  --ok: #3ecf73;
+  --warn: #f5b73d;
+  --bar-h: 52px;
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+/* The app box follows the visual viewport, so it shrinks above the on-screen
+   keyboard instead of being covered by it (see fitViewport in app.js). */
+#app {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+[hidden] { display: none !important; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.panel {
+  height: 100%;
+  overflow-y: auto;
+  padding: calc(var(--sa-t) + 48px) calc(var(--sa-r) + 28px) calc(var(--sa-b) + 28px) calc(var(--sa-l) + 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.panel > * { max-width: 360px; width: 100%; }
+
+.logo {
+  width: 76px !important;
+  height: 76px;
+  border-radius: 20px;
+  background: url(icon-180.png) center / cover;
+  margin-bottom: 18px;
+}
+
+h1 { font-size: 26px; line-height: 1.2; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+.lead { margin: 0 0 26px; color: var(--muted); min-height: 1.45em; text-wrap: pretty; }
+
+.steps {
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  text-align: left;
+  background: var(--panel);
+  border-radius: 16px;
+}
+.steps li {
+  counter-increment: step;
+  display: flex;
+  gap: 12px;
+  padding: 13px 16px;
+  text-wrap: pretty;
+}
+.steps li + li { border-top: 1px solid var(--line); }
+.steps li::before {
+  content: counter(step);
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.manual { text-align: left; color: var(--muted); font-size: 14px; }
+.manual summary { cursor: pointer; padding: 8px 0; text-align: center; color: var(--accent); list-style: none; }
+.manual summary::-webkit-details-marker { display: none; }
+.manual p { margin: 4px 0 10px; }
+.field { display: flex; gap: 8px; }
+.field input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.primary {
+  background: var(--accent);
+  color: #06121f;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+.primary.big { padding: 15px 20px; border-radius: 14px; font-size: 17px; }
+.primary:disabled { opacity: 0.5; }
+.link { color: var(--muted); margin-top: 18px; padding: 8px; font-size: 14px; }
+.error { color: var(--danger); margin: 16px 0 0; text-wrap: pretty; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ view */
+
+#view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--sa-t);
+}
+
+#stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  background: #000;
+}
+
+#canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#canvas.animate { transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); }
+#video { display: block; width: 100%; height: 100%; background: #000; pointer-events: none; }
+
+#fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.ripple {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: rgba(76, 155, 255, 0.25);
+  animation: ripple 0.38s ease-out forwards;
+}
+.ripple.right { border-color: var(--warn); background: rgba(245, 183, 61, 0.25); }
+.ripple.hold { animation: hold 0.25s ease-out forwards; border-color: var(--warn); background: rgba(245, 183, 61, 0.18); }
+@keyframes ripple { from { transform: scale(0.35); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+@keyframes hold { from { transform: scale(1.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+#minimap {
+  position: absolute;
+  right: calc(var(--sa-r) + 10px);
+  bottom: 10px;
+  width: 84px;
+  border-radius: 6px;
+  background: rgba(20, 22, 26, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+#minimap.on { opacity: 1; }
+#minimap i {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  background: rgba(76, 155, 255, 0.22);
+  border-radius: 2px;
+}
+
+#banner {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 22, 26, 0.9);
+  box-shadow: 0 0 0 1px var(--line);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Extra keys shown above the on-screen keyboard */
+#keys {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 6px calc(var(--sa-r) + 8px) 6px calc(var(--sa-l) + 8px);
+  overflow-x: auto;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  scrollbar-width: none;
+}
+#keys::-webkit-scrollbar { display: none; }
+#keys button {
+  flex: none;
+  min-width: 44px;
+  height: 38px;
+  padding: 0 11px;
+  border-radius: 8px;
+  background: var(--raise);
+  font-size: 16px;
+}
+#keys button:active { background: #343943; }
+#keys button[aria-pressed="true"] { background: var(--accent); color: #06121f; }
+
+#bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: calc(var(--bar-h) + var(--sa-b));
+  padding: 0 calc(var(--sa-r) + 8px) var(--sa-b) calc(var(--sa-l) + 8px);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+/* With the keyboard open the home-indicator inset is covered by the keyboard */
+.kbd-open #bar { height: var(--bar-h); padding-bottom: 0; }
+#bar button {
+  width: 52px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+#bar button:active { background: var(--raise); }
+#bar button[aria-pressed="true"] { background: var(--raise); color: var(--accent); }
+#bar svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#dot {
+  margin-left: auto;
+  margin-right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+#dot.ok { background: var(--ok); }
+#dot.warn { background: var(--warn); }
+
+#sheet {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 12px calc(var(--sa-r) + 12px) calc(var(--sa-b) + 12px) calc(var(--sa-l) + 12px);
+}
+.sheet-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 18px 16px 12px;
+  text-align: center;
+}
+.sheet-card p { margin: 0 0 4px; }
+.sheet-card .muted { color: var(--muted); font-size: 14px; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.sheet-card button {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--raise);
+  margin-top: 8px;
+}
+.sheet-card .danger { color: var(--danger); }
+.sheet-card .quiet { background: none; color: var(--muted); }
+
+/* Invisible text field that summons the on-screen keyboard. 16px keeps iOS
+   from zooming the page when it gets focus. */
+#kbd {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  resize: none;
+  pointer-events: none;
+  caret-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #canvas.animate { transition: none; }
+  .ripple { animation-duration: 0.01s; }
+}

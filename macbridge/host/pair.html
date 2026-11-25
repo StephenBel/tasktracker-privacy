@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'self'; script-src 'self'">
+<title>Подключить телефон</title>
+<link rel="stylesheet" href="pair.css">
+</head>
+<body>
+<main id="pairing">
+  <h1>Подключить телефон</h1>
+  <p class="lead">Наведите камеру iPhone или iPad на код и откройте ссылку. Это нужно сделать один раз.</p>
+  <div class="qr"><img id="qr" alt="QR-код для сопряжения"></div>
+  <p class="hint" id="timer"></p>
+  <div class="row">
+    <button id="copy" type="button">Скопировать ссылку</button>
+    <button id="refresh" type="button" class="quiet">Новый код</button>
+  </div>
+  <p class="note">Код одноразовый и действует 5 минут. Не показывайте его посторонним: кто первым отсканирует код, тот получит доступ к этому Маку.</p>
+</main>
+<main id="done" hidden>
+  <div class="check">✓</div>
+  <h1>Готово</h1>
+  <p class="lead"><span id="device"></span> теперь может подключаться к этому Маку.</p>
+  <p class="note">Отозвать доступ можно в меню MacBridge: «Доверенные устройства».</p>
+</main>
+<script src="pair.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+node_modules/
+host/dist/
+host/bin/
+web/dist/
+out/
