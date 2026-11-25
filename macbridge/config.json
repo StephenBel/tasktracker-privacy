@@ -1,5 +1,5 @@
 {
-  "clientUrl": "https://YOUR-CLIENT.example/",
+  "clientUrl": "https://macbridge-puce.vercel.app/",
   "signal": {
     "type": "supabase",
     "url": "https://rezoyydjugoravsdzlgg.supabase.co",

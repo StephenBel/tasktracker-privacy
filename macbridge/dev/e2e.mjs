@@ -5,7 +5,12 @@
 // for the input helper), another page emulates an iPhone and runs the real
 // web client. They talk through the local relay and a real WebRTC connection.
 //
-//   npm test            (add SHOTS=dir to save screenshots)
+//   npm test                   (add SHOTS=dir to save screenshots)
+//   SIGNAL=config npm test     use the signaling server from config.json (the
+//                              real Supabase project) instead of the local relay
+//   SIGNAL=config CLIENT=config npm test
+//                              additionally load the phone page from the
+//                              published clientUrl instead of the local build
 
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -22,8 +27,13 @@ const { chromium } = createRequire(import.meta.url)('playwright'); // globally i
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'macbridge-test-'));
 const shots = process.env.SHOTS;
+const realSignal = process.env.SIGNAL === 'config'; // real signaling server
 const RELAY_PORT = 18787;
 const WEB_PORT = 18788;
+const clientBase =
+  process.env.CLIENT === 'config'
+    ? JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf8')).clientUrl
+    : `http://127.0.0.1:${WEB_PORT}/`;
 
 // ------------------------------------------------------------------ setup
 
@@ -32,7 +42,9 @@ fs.writeFileSync(
   cfgPath,
   JSON.stringify({
     clientUrl: `http://127.0.0.1:${WEB_PORT}/`,
-    signal: { type: 'relay', url: `ws://127.0.0.1:${RELAY_PORT}` },
+    signal: realSignal
+      ? JSON.parse(fs.readFileSync(path.join(root, 'config.json'), 'utf8')).signal
+      : { type: 'relay', url: `ws://127.0.0.1:${RELAY_PORT}` },
     iceServers: [],
     video: { maxWidth: 2560, maxFps: 30, maxBitrate: 8000000 },
   }),
@@ -125,6 +137,10 @@ const browser = await chromium.launch({
     '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding',
     '--disable-backgrounding-occluded-windows',
+    // Behind an intercepting corporate/sandbox proxy the browser has to use it.
+    ...(realSignal && process.env.HTTPS_PROXY
+      ? [`--proxy-server=${process.env.HTTPS_PROXY}`, '--ignore-certificate-errors']
+      : []),
   ],
 });
 const phone = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
@@ -141,7 +157,7 @@ try {
   const hostEvents = (name) => hostPage.evaluate((n) => window.events.filter((e) => e[0] === n).map((e) => e[1]), name);
 
   const secret = crypto.randomBytes(16).toString('base64url');
-  const pairUrl = `http://127.0.0.1:${WEB_PORT}/#p=${ready.hostPub}.${secret}`;
+  const pairUrl = `${clientBase}#p=${ready.hostPub}.${secret}`;
 
   // Record everything that crosses the relay, like an eavesdropper would.
   const sniffed = [];
@@ -150,15 +166,15 @@ try {
     const d = new Uint8Array(await crypto.subtle.digest('SHA-256', raw)).slice(0, 12);
     return btoa(String.fromCharCode(...d)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }, ready.hostPub);
-  const sniffer = new WebSocket(`ws://127.0.0.1:${RELAY_PORT}/?ch=macbridge-${hostId}`);
-  sniffer.on('message', (d) => sniffed.push(JSON.parse(d.toString())));
-  await new Promise((r) => sniffer.on('open', r));
+  const sniffer = realSignal ? null : new WebSocket(`ws://127.0.0.1:${RELAY_PORT}/?ch=macbridge-${hostId}`);
+  sniffer?.on('message', (d) => sniffed.push(JSON.parse(d.toString())));
+  if (sniffer) await new Promise((r) => sniffer.on('open', r));
 
   // ----------------------------------------------------- pairing security
   const strangerCtx = await browser.newContext(phone);
   const stranger = await strangerCtx.newPage();
   await stranger.goto(pairUrl);
-  await sleep(1500);
+  await sleep(realSignal ? 4000 : 1500);
   check('pairing link is refused while no pairing window is open on the Mac',
     (await hostEvents('pair:done')).length === 0);
   await strangerCtx.close();
@@ -187,8 +203,10 @@ try {
   if (shots) await page.screenshot({ path: path.join(shots, '1-connected.png') });
 
   const leaked = JSON.stringify(sniffed);
-  check('relay traffic is opaque (no SDP, no device name)',
-    sniffed.length > 3 && !/candidate|fingerprint|v=0|Браузер|Test Mac/.test(leaked), `${sniffed.length} envelopes`);
+  if (!realSignal) {
+    check('relay traffic is opaque (no SDP, no device name)',
+      sniffed.length > 3 && !/candidate|fingerprint|v=0|Браузер|Test Mac/.test(leaked), `${sniffed.length} envelopes`);
+  }
 
   const pairEnvelope = sniffed.find((m) => m.t === 'pair');
   const helloEnvelope = sniffed.find((m) => m.t === 'c2h');
@@ -378,6 +396,7 @@ try {
   await page.tap('#btn-kbd');
 
   // --------------------------------------------------- signaling security
+  if (!realSignal) {
   const sessionsBefore = (await hostEvents('session:state')).length;
   const attacker = new WebSocket(`ws://127.0.0.1:${RELAY_PORT}/?ch=macbridge-${hostId}`);
   await new Promise((r) => attacker.on('open', r));
@@ -391,6 +410,7 @@ try {
       (await hostEvents('pair:done')).length === 1 &&
       (await page.evaluate(() => !document.getElementById('view').hidden)));
   attacker.close();
+  }
 
   // ------------------------------------------------------------ lifecycle
   await page.reload();
@@ -422,11 +442,11 @@ try {
 
   if (shots) {
     const fresh = await (await browser.newContext(phone)).newPage();
-    await fresh.goto(`http://127.0.0.1:${WEB_PORT}/`);
+    await fresh.goto(clientBase);
     await sleep(500);
     await fresh.screenshot({ path: path.join(shots, '7-setup.png') });
   }
-  sniffer.close();
+  sniffer?.close();
 } catch (e) {
   console.error(e);
   failures++;
